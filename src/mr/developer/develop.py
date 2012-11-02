@@ -773,6 +773,46 @@ class CmdUpdate(Command):
                              always_accept_server_certificate=self.develop.always_accept_server_certificate)
 
 
+class CmdAddRev(Command):
+    def __init__(self, develop):
+        Command.__init__(self, develop)
+        description = "Updates Reviosion all known packages currently checked out."
+        self.parser = self.develop.parsers.add_parser(
+            "revision",
+            description=description)
+
+        self.develop.parsers._name_parser_map["rev"] = self.develop.parsers._name_parser_map["revision"]
+        self.develop.parsers._choices_actions.append(ChoicesPseudoAction(
+            "revision", "rev", help=description))
+        self.parser.add_argument("-a", "--auto-checkout", dest="auto_checkout",
+                               action="store_true", default=False,
+                               help="""Only considers packages declared by auto-checkout. If you don't specify a <package-regexps> then all declared packages are processed.""")
+        self.parser.add_argument("-d", "--develop", dest="develop",
+                               action="store_true", default=False,
+                               help="""Only considers packages currently in development mode. If you don't specify a <package-regexps> then all develop packages are processed.""")
+        self.parser.add_argument("-f", "--force", dest="force",
+                               action="store_true", default=False,
+                               help="""Force update even if the working copy is dirty.""")
+        self.parser.add_argument("-v", "--verbose", dest="verbose",
+                               action="store_true", default=False,
+                               help="""Show output of VCS command.""")
+        self.parser.add_argument("package-regexp", nargs="*",
+                                 help="A regular expression to match package names.")
+        self.parser.set_defaults(func=self)
+
+    def __call__(self, args):
+        packages = self.get_packages(getattr(args, 'package-regexp'),
+                                     auto_checkout=args.auto_checkout,
+                                     checked_out=True,
+                                     develop=args.develop)
+        workingcopies = self.get_workingcopies(self.develop.sources)
+        force = args.force or self.develop.always_checkout
+        workingcopies.revision(sorted(packages),
+                             force=force,
+                             verbose=args.verbose,
+                             always_accept_server_certificate=self.develop.always_accept_server_certificate)
+
+
 class Develop(object):
     def __call__(self, **kwargs):
         logger.setLevel(logging.INFO)
@@ -797,6 +837,7 @@ class Develop(object):
         CmdReset(self)
         CmdStatus(self)
         CmdUpdate(self)
+        CmdAddRev(self)
         args = self.parser.parse_args()
 
         try:

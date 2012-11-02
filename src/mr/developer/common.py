@@ -295,6 +295,34 @@ class WorkingCopies(object):
             the_queue.put_nowait((wc, wc.update, kw))
         self.process(the_queue)
 
+    def revision(self, packages, **kwargs):
+        print "revision",packages, kwargs
+        the_queue = Queue.Queue()
+        for name in packages:
+            kw = kwargs.copy()
+            if name not in self.sources:
+                continue
+            source = self.sources[name]
+            kind = source['kind']
+            wc = self.workingcopytypes.get(kind)(source)
+            if wc is None:
+                logger.error("Unknown repository type '%s'." % kind)
+                sys.exit(1)
+            if wc.status() != 'clean' and not kw.get('force', False):
+                print >>sys.stderr, "The package '%s' is dirty." % name
+                answer = yesno("Do you want to update it anyway?", default=False, all=True)
+                if answer:
+                    kw['force'] = True
+                    if answer == 'all':
+                        kwargs['force'] = True
+                else:
+                    logger.info("Skipped update of '%s'." % name)
+                    continue
+            logger.info("Queued '%s' for revision update.", name)
+            the_queue.put_nowait((wc, wc.revision, kw))
+        self.process(the_queue)
+
+
 
 def parse_buildout_args(args):
     settings = dict(
@@ -374,6 +402,8 @@ def parse_buildout_args(args):
             # We've run out of command-line options and option assignnemnts
             # The rest should be commands, so we'll stop here
             break
+    print "parser buildout args"
+    print options, settings, args
     return options, settings, args
 
 

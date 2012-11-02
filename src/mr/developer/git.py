@@ -249,6 +249,16 @@ class GitWorkingCopy(common.BaseWorkingCopy):
         if self.status() != 'clean' and not kwargs.get('force', False):
             raise GitError("Can't update package '%s' because it's dirty." % name)
         return self.git_update(**kwargs)
+    
+    def revision(self, **kwargs):
+        name = self.source['name']
+        if not self.matches():
+            self.output((logger.warning, "Can't update package '%s' because its URL doesn't match." % name))
+        if self.status() != 'clean' and not kwargs.get('force', False):
+            raise GitError("Can't update package '%s' because it's dirty." % name)
+        print kwargs
+        cmd = self.run_git[
+        return 1
 
     def git_set_pushurl(self, stdout_in, stderr_in):
         cmd = self.run_git(
