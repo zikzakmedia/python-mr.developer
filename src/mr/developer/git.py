@@ -41,11 +41,6 @@ class GitWorkingCopy(common.BaseWorkingCopy):
         if 'revision' in source:
             source['rev'] = source['revision']
             del source['revision']
-        if 'branch' in source and 'rev' in source:
-            logger.error("Cannot specify both branch (%s) and rev/revision "
-                         "(%s) in source for %s",
-                         source['branch'], source['rev'], source['name'])
-            sys.exit(1)
         if 'branch' not in source:
             source['branch'] = 'master'
         super(GitWorkingCopy, self).__init__(source)
@@ -139,8 +134,10 @@ class GitWorkingCopy(common.BaseWorkingCopy):
             return stdout
 
     def git_switch_branch(self, stdout_in, stderr_in):
+
         path = self.source['path']
         branch = self.source['branch']
+
         rbp = self._remote_branch_prefix
         cmd = self.run_git(["branch", "-a"], cwd=path)
         stdout, stderr = cmd.communicate()
@@ -161,6 +158,17 @@ class GitWorkingCopy(common.BaseWorkingCopy):
         else:
             logger.error("No such branch %r", branch)
             sys.exit(1)
+
+        
+        if 'branch' in self.source and 'rev' in self.source:
+            cmd_check = self.run_git( ['branch','--contains',
+                self.source['rev']], cwd = path)
+            stdout, stderr = cmd_check.communicate()
+            if not branch in stdout or cmd.returncode != 0:
+                raise GitError("git checkout of branch '%s' and revision '%s'"
+                        "failed. (revision not in branch)\n%s" %
+                        (branch,self.source['rev'],stderr))
+
         # runs the checkout with predetermined arguments
         cmd = self.run_git(argv, cwd=path)
         stdout, stderr = cmd.communicate()
