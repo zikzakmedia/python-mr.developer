@@ -296,7 +296,6 @@ class WorkingCopies(object):
         self.process(the_queue)
 
     def revision(self, packages, **kwargs):
-        print "revision",packages, kwargs
         the_queue = Queue.Queue()
         for name in packages:
             kw = kwargs.copy()
@@ -402,8 +401,6 @@ def parse_buildout_args(args):
             # We've run out of command-line options and option assignnemnts
             # The rest should be commands, so we'll stop here
             break
-    print "parser buildout args"
-    print options, settings, args
     return options, settings, args
 
 
@@ -478,5 +475,5 @@ class Config(object):
         if not self._config.has_section('mr.developer'):
             self._config.add_section('mr.developer')
         self._config.set('mr.developer', 'rewrites', "\n".join(" ".join(x) for x in self.rewrites))
-
         self._config.write(open(self.cfg_path, "w"))
+

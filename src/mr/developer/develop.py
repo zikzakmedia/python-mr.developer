@@ -13,6 +13,7 @@ import stat
 import subprocess
 import sys
 import textwrap
+import ConfigParser
 
 
 def find_base():
@@ -812,6 +813,30 @@ class CmdAddRev(Command):
                              verbose=args.verbose,
                              always_accept_server_certificate=self.develop.always_accept_server_certificate)
 
+        buildout_file = self.develop.config.buildout_settings['config_file']
+        config = ConfigParser.ConfigParser()
+        config.read(buildout_file)
+
+        for key,val in workingcopies.sources.iteritems():
+            value = config.get('sources',key)
+            if not value:
+                continue
+            revision = val.get('rev').replace('\n','')
+
+            if 'rev' in value:
+                option_matcher = re.compile(r'rev+=.*')
+                config.set('sources',key,re.sub(option_matcher,'rev=%s'%revision,value))
+            elif 'revision' in value:
+                option_matcher = re.compile(r'rev+=.*')
+                config.set('sources',key,re.sub(option_matcher,'revision=%s'%revision,value))
+            else:
+                config.set('sources',key, value + " rev=%s"%revision)
+        
+        # Writing our configuration 
+        with open(buildout_file, 'wb') as configfile:
+           config.write(configfile)
+
+
 
 class Develop(object):
     def __call__(self, **kwargs):
@@ -859,7 +884,8 @@ class Develop(object):
         root_logger = logging.getLogger()
         root_logger.handlers = []
         root_logger.setLevel(logging.INFO)
-        extension = Extension(buildout)
+        self.extension = Extension(buildout)
+        extension = self.extension
         self.sources = extension.get_sources()
         self.sources_dir = extension.get_sources_dir()
         self.auto_checkout = extension.get_auto_checkout()

@@ -252,13 +252,21 @@ class GitWorkingCopy(common.BaseWorkingCopy):
     
     def revision(self, **kwargs):
         name = self.source['name']
+        branch = self.source['branch']
+        path = self.source['path']
         if not self.matches():
             self.output((logger.warning, "Can't update package '%s' because its URL doesn't match." % name))
         if self.status() != 'clean' and not kwargs.get('force', False):
             raise GitError("Can't update package '%s' because it's dirty." % name)
-        print kwargs
-        cmd = self.run_git[
-        return 1
+        cmd = self.run_git(['rev-list',branch,'-1'],cwd=path)
+        stdout,stderr = cmd.communicate()
+        if cmd.returncode != 0:
+            raise GitError("git failed to get revision for module %s and branch %s.\n" % (name, branch))
+
+        self.source['rev']=stdout
+        return stdout
+
+
 
     def git_set_pushurl(self, stdout_in, stderr_in):
         cmd = self.run_git(
