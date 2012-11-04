@@ -802,6 +802,15 @@ class CmdAddRev(Command):
         self.parser.set_defaults(func=self)
 
     def __call__(self, args):
+        def get_config_files( config_file ):
+            config = ConfigParser.ConfigParser()
+            config.read(config_file)
+            if not config.has_option('buildout','extends'):
+                return [config_file]
+
+            file_extends = config.get('buildout','extends')
+            return  [config_file] +  get_config_files(file_extends)
+
         packages = self.get_packages(getattr(args, 'package-regexp'),
                                      auto_checkout=args.auto_checkout,
                                      checked_out=True,
@@ -814,27 +823,31 @@ class CmdAddRev(Command):
                              always_accept_server_certificate=self.develop.always_accept_server_certificate)
 
         buildout_file = self.develop.config.buildout_settings['config_file']
-        config = ConfigParser.ConfigParser()
-        config.read(buildout_file)
+        config_files = get_config_files(buildout_file)
+        for config_file in config_files:
+            config = ConfigParser.ConfigParser()
+            config.read(config_file)
 
-        for key,val in workingcopies.sources.iteritems():
-            value = config.get('sources',key)
-            if not value:
-                continue
-            revision = val.get('rev').replace('\n','')
+            for key,val in workingcopies.sources.iteritems():
+                if not config.has_option('sources',key):
+                    continue
+                value = config.get('sources',key)
+                if not value:
+                    continue
+                revision = val.get('rev').replace('\n','')
 
-            if 'rev' in value:
-                option_matcher = re.compile(r'rev+=.*')
-                config.set('sources',key,re.sub(option_matcher,'rev=%s'%revision,value))
-            elif 'revision' in value:
-                option_matcher = re.compile(r'rev+=.*')
-                config.set('sources',key,re.sub(option_matcher,'revision=%s'%revision,value))
-            else:
-                config.set('sources',key, value + " rev=%s"%revision)
-        
-        # Writing our configuration 
-        with open(buildout_file, 'wb') as configfile:
-           config.write(configfile)
+                if 'rev' in value:
+                    option_matcher = re.compile(r'rev+=.*')
+                    config.set('sources',key,re.sub(option_matcher,'rev=%s'%revision,value))
+                elif 'revision' in value:
+                    option_matcher = re.compile(r'rev+=.*')
+                    config.set('sources',key,re.sub(option_matcher,'revision=%s'%revision,value))
+                else:
+                    config.set('sources',key, value + " rev=%s"%revision)
+            
+            # Writing our configuration 
+            with open(config_file, 'wb') as configfile:
+               config.write(configfile)
 
 
 
