@@ -344,6 +344,9 @@ class CmdInfo(Command):
         info_opts.add_argument("--url", dest="info",
                              action="append_const", const="url",
                              help="""Prints the URL of the package.""")
+        info_opts.add_argument("-b", "--branch", dest="info",
+                             action="append_const", const="branch",
+                             help="""Prints the absolute path of the package.""")
         self.parser.add_argument_group(info_opts)
         self.parser.add_argument("package-regexp", nargs="*",
                                  help="A regular expression to match package names.")
@@ -366,12 +369,16 @@ class CmdInfo(Command):
                         print source['kind'],
                     elif key == 'url':
                         print source['url'],
+                    elif key == 'branch':
+                        print source.get('branch'),
                 print
             else:
                 print "Name:", name
                 print "Path:", source['path']
                 print "Type:", source['kind']
                 print "URL:", source['url']
+                if source.get('branch'):
+                    print "Branch:", source.get('branch')
                 print
 
 
